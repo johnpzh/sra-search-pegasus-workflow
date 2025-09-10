@@ -4,3 +4,19 @@ pegasus.properties
 wf-output
 wf-scratch
 workflow.yml
+
+# Output
+output.*
+output_*
+
+# Workflow Output
+*.bt2
+*.fastq
+*.tar.gz
+*.bam
+*.bam.bai
+
+# IDE
+.mypy_cache/
+.vscode/
+.idea/

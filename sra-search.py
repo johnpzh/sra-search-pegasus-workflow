@@ -26,7 +26,7 @@ def add_merge_jobs(wf, parents):
     parents is a list of jobs, for which all outputs will be
     in the resulting tarball
     '''
-    
+
     max_parents = 25
     final_job = False
     level = 1
@@ -69,27 +69,27 @@ def generate_wf():
     parser.add_argument('--reference', dest='reference', default=None, required=True,
                         help='Specifies the fasta file to use as a reference for the searc')
     args = parser.parse_args(sys.argv[1:])
-    
+
     wf = Workflow('sra-search')
     tc = TransformationCatalog()
     rc = ReplicaCatalog()
-    
+
     # --- Properties ----------------------------------------------------------
-    
+
     # set the concurrency limit for the download jobs, and send some extra usage
     # data to the Pegasus developers
     props = Properties()
     props['dagman.fasterq-dump.maxjobs'] = '20'
     props['pegasus.catalog.workflow.amqp.url'] = 'amqp://friend:donatedata@msgs.pegasus.isi.edu:5672/prod/workflows'
-    props.write() 
-    
+    props.write()
+
     # --- Event Hooks ---------------------------------------------------------
 
     # get emails on all events at the workflow level
     wf.add_shell_hook(EventType.ALL, '{}/share/pegasus/notification/email'.format(PEGASUS_HOME))
-    
+
     # --- Transformations -----------------------------------------------------
-    
+
     container = Container(
                    'sra-search',
                    Container.SINGULARITY,
@@ -106,7 +106,7 @@ def generate_wf():
                     )
     bowtie2_build.add_profiles(Namespace.CONDOR, key='request_memory', value='1 GB')
     tc.add_transformations(bowtie2_build)
-    
+
     bowtie2 = Transformation(
                   'bowtie2',
                   site='local',
@@ -186,10 +186,10 @@ def generate_wf():
         j.add_inputs(*ref_files, fastq_1, fastq_2)
         j.add_outputs(bam, bam_index, stage_out=False)
         wf.add_jobs(j)
-        
+
         # keep track of jobs and outputs for merging
         to_merge.append(j)
-    
+
     add_merge_jobs(wf, to_merge)
 
     try:

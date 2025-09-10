@@ -28,11 +28,19 @@ if [ -z "$SRA_LIST" ] || [ -z "$REFERENCE" ]; then
 fi
 
 # Build bowtie2 index
-echo "Building bowtie2 index..."
+echo
+echo "#################################"
+echo "# Task: Building bowtie2 index..."
+echo "#################################"
+echo
+set -x
 bowtie2-build "$REFERENCE" reference
+set +x
 
 # Read SRA IDs, skipping short/empty lines
+set -x
 mapfile -t SRA_IDS < <(grep '^SRR' "$SRA_LIST" || true)
+set +x
 
 if [ ${#SRA_IDS[@]} -eq 0 ]; then
   echo "No valid SRA IDs found in $SRA_LIST"
@@ -42,23 +50,35 @@ fi
 # Function to process one SRA ID
 process_sra() {
   local id="$1"
-  echo "Processing $id..."
+  echo "#------------------"
+  echo "# Processing $id..."
+  echo "#------------------"
 
   # Download FASTQ
+  set -x
   fasterq-dump --split-files "$id"
+  set +x
 
   # Align with bowtie2 and create BAM/BAI
+  set -x
   bowtie2 -p 1 -q --no-unal -x reference -1 *_1.fastq -2 *_2.fastq | \
     samtools view -bS - | \
     samtools sort -T tmp -O Bam -o "${id}.bam" -
   samtools index "${id}.bam"
+  set +x
 }
 
 export -f process_sra
 
 # Run in parallel, limiting to 20 concurrent (like original workflow)
-echo "Processing ${#SRA_IDS[@]} SRA IDs in parallel..."
-parallel -j 20 process_sra ::: "${SRA_IDS[@]}"
+echo
+echo "########################################################"
+echo "# Task: Processing ${#SRA_IDS[@]} SRA IDs in parallel..."
+echo "########################################################"
+echo
+set -x
+parallel --compress -j 20 process_sra ::: "${SRA_IDS[@]}"
+set +x
 
 # Collect all BAM and BAI files for merging
 BAM_FILES=(*.bam *.bam.bai)
@@ -83,8 +103,12 @@ add_merge() {
         out_file="results.tar.gz"
       fi
 
-      echo "Merging into $out_file..."
+      echo "#--------------------------------------------"
+      echo "# Merging chunk ${chunk[@]} into $out_file..."
+      echo "#--------------------------------------------"
+      set -x
       tar -czf "$out_file" "${chunk[@]}"
+      set +x
 
       children+=("$out_file")
     done
@@ -95,7 +119,15 @@ add_merge() {
 }
 
 # Perform the merge
-echo "Merging results..."
+echo
+echo "##########################"
+echo "# Task: Merging results..."
+echo "##########################"
+echo
+set -x
 add_merge "${BAM_FILES[@]}"
+set +x
 
-echo "Workflow complete. Final output: results.tar.gz"
+echo
+echo "Workflow complete."
+echo
