@@ -1,0 +1,9 @@
+Actual_Path,Filesystem,Type,Size_KB,Used,Avail_KB,Use%,Mounted_on,Mode,Access_Right,Read_Time(sec),Read_Bandwidth,Write_Time(sec),Write_Bandwidth
+/tmp,/dev/sda5,ext3,7932336,38088,7484648,1%,/tmp,1777,drwxrwxrwt,0.207239, 5.1 GB/s,3.6088, 291 MB/s
+/rcfs/scratch/peng599,beegfs_nodev,beegfs,4916584960512,4368332777984,548252182528,89%,/rcfs,2755,drwxr-sr-x,0.591172, 1.8 GB/s,0.969759, 1.1 GB/s
+/tmp/tmux-303585,/dev/sda5,ext3,7932336,38088,7484648,1%,/tmp,700,drwx------,0.202932, 5.2 GB/s,3.63314, 289 MB/s
+/qfs/projects/oddite/peng599,qfsi:/projects,nfs,195312500736,4870385664,190442115072,3%,/qfs/projects,2755,drwxr-sr-x,0.204782, 5.1 GB/s,13.5998, 77.1 MB/s
+/qfs/people/peng599,qfsi:/people,nfs,419921920,245393408,174528512,59%,/qfs/people,2700,drwx--S---,0.200896, 5.2 GB/s,14.2439, 73.6 MB/s
+/scratch,/dev/sda8,xfs,359594432,151492652,208101780,43%,/scratch,777,drwxrwxrwx,0.198778, 5.3 GB/s,3.22128, 326 MB/s
+/dev/shm,tmpfs,tmpfs,65693232,2382788,63310444,4%,/dev/shm,1777,drwxrwxrwt,0.205334, 5.1 GB/s,0.451993, 2.3 GB/s
+/dev/mqueue,mqueue,mqueue,0,0,0,-,/dev/mqueue,1777,drwxrwxrwt,7.542305, 796 kB/s,0.000433239, 0.0 kB/s
