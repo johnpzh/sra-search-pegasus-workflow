@@ -1,4 +1,5 @@
 set -euo pipefail
+# set -u
 
 # echo
 # echo "pwd: $(pwd)"
@@ -29,17 +30,20 @@ shift
 for FILE in "$@"; do
     if (echo $FILE | grep tar.gz) >/dev/null 2>&1; then
         set -x
-        tar -xzf $FILE -C "${tar_folder}"
+        LD_PRELOAD="${DATALIFE_LIB_PATH}" DATALIFE_TASK_NAME="tar-extract" \
+            tar -xzf $FILE -C "${tar_folder}"
         set +x
     else
         set -x
-        mv $FILE "${tar_folder}/"
+        LD_PRELOAD="${DATALIFE_LIB_PATH}" DATALIFE_TASK_NAME="mv-command" \
+            mv $FILE "${tar_folder}/"
         set +x
     fi
 done
 
 set -x
-tar -czf $TARGET "${tar_folder}"
+LD_PRELOAD="${DATALIFE_LIB_PATH}" DATALIFE_TASK_NAME="tar-compress" \
+    tar -czf $TARGET "${tar_folder}"
 set +x
 
 

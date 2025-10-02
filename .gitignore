@@ -9,6 +9,9 @@ workflow.yml
 output.*
 output_*
 
+# Data
+datalife_stats*/
+
 # Workflow Output
 *.bt2
 *.fastq

@@ -1,10 +1,11 @@
 #!/bin/bash
-#SBATCH --job-name="sra_v1"
+#SBATCH --job-name="sra_v2_datalife"
 #SBATCH --partition=slurm
+######SBATCH --partition=short
 ######SBATCH --exclude=dc[119,077]
 #SBATCH --account=datamesh
-#SBATCH -N 3
-#SBATCH --time=04:44:44
+#SBATCH -N 1
+#SBATCH --time=01:01:01
 #SBATCH --output=output.%x.%j.out.log
 #SBATCH --error=output.%x.%j.err.log
 #SBATCH --mail-type=FAIL
@@ -77,11 +78,54 @@ printenv
 #that is loaded corresponds to the environment the executable was built in.
 
 # set -euo pipefail
-set -euo pipefail
+set -u
 
-num_tests=10
-workspace="output.workspace.${SLURM_JOB_ID}.$(date +%FT%T)"
-script="../../scripts/sh01.sra-search.v1.sh"
+export PREV_PWD=$(readlink -f .)
+export DATALIFE_LIB_PATH="/qfs/projects/oddite/peng599/FlowForecaster/datalife_Candice/build/flow-monitor/src/libmonitor.so"
+# export DATALIFE_LIB_PATH="/qfs/projects/oddite/lenny/projects/datalife/install/lib/libmonitor.so"
+export DATALIFE_OUTPUT_PATH="${PREV_PWD}/datalife_stats"
+# export DATALIFE_FILE_PATTERNS="\
+# *.fits, *.vcf, *.lht, *.fna, *.*.bt2, \
+# *.fastq, *.fasta.amb, *.fasta.sa, *.fasta.bwt, *.fasta.pac, \
+# *.fasta.ann, *.fasta, *.stf, *.out, *.dot, \
+# *.gz, *.tar.gz, *.dcd, *.pt, *.h5, \
+# *.nc, *SAS, *EAS, *GBR, *AMR, \
+# *AFR, *EUR, *ALL, *.chr*.txt, *.datalifetest, \
+# columns.txt, \
+# *.sra, *.fastq, *.bam, *.bam.bai \
+# "
+# export DATALIFE_FILE_PATTERNS="\
+# *.fits, *.vcf, *.lht, \
+# *.fastq, *.fasta.amb, *.fasta.sa, *.fasta.bwt, *.fasta.pac, \
+# *.fasta.ann, *.fasta, *.stf, *.out, *.dot, \
+# *.gz, *.tar.gz, *.dcd, *.pt, *.h5, \
+# *.nc, *SAS, *EAS, *GBR, *AMR, \
+# *AFR, *EUR, *ALL, *.chr*.txt, *.datalifetest, \
+# columns.txt, \
+# *.fna, \
+# reference.2.bt2, reference.3.bt2, reference.4.bt2, reference.rev.1.bt2, reference.rev.2.bt2, \
+# *.sra, *.fastq, *.bam, *.bam.bai \
+# "
+export DATALIFE_FILE_PATTERNS="\
+*.fits, *.vcf, *.lht, \
+*.fastq, *.fasta.amb, *.fasta.sa, *.fasta.bwt, *.fasta.pac, \
+*.fasta.ann, *.fasta, *.stf, *.out, *.dot, \
+*.gz, *.tar.gz, *.dcd, *.pt, *.h5, \
+*.nc, *SAS, *EAS, *GBR, *AMR, \
+*AFR, *EUR, *ALL, *.chr*.txt, *.datalifetest, \
+columns.txt, \
+reference.2.bt2, reference.3.bt2, reference.4.bt2, reference.rev.1.bt2, reference.rev.2.bt2, \
+*.fastq, *.bam, *.bam.bai \
+"
+
+rm -rf "${DATALIFE_OUTPUT_PATH}"
+mkdir -p "${DATALIFE_OUTPUT_PATH}"
+
+export SRA_POOL_DIR="../../data"
+
+num_tests=1
+workspace="output.workspace.${SLURM_JOB_NAME}.${SLURM_JOB_ID}.$(date +%FT%T)"
+script="../../scripts/sh01.sra-search.v2.sh"
 id_list_file="../../tests/${num_tests}/sra_ids.txt"
 reference_file="../../tests/${num_tests}/crassphage.fna"
 
@@ -92,6 +136,7 @@ echo "num_tests: ${num_tests}"
 echo "id_list_file: ${id_list_file}"
 echo "reference_file: ${reference_file}"
 echo "workspace: ${workspace}"
+echo "SLURM_JOB_NUM_NODES: ${SLURM_JOB_NUM_NODES}"
 echo "SLURM_JOB_NODELIST: ${SLURM_JOB_NODELIST}"
 echo
 
