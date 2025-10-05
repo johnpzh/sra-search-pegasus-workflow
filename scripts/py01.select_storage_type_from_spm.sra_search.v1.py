@@ -78,7 +78,7 @@ def create_core_dag_of_sra_search() -> nx.DiGraph:
     """
     core_dag = nx.DiGraph()
     core_dag.add_edge("bowtie2-build", "bowtie2-samtools")
-    core_dag.add_edge("faster-dump", "bowtie2-samtools")
+    core_dag.add_edge("fasterq-dump", "bowtie2-samtools")
     core_dag.add_edge("bowtie2-samtools", "samtools")
     core_dag.add_edge("bowtie2-samtools", "tar-compress")
     core_dag.add_edge("samtools", "tar-compress")

@@ -12,6 +12,7 @@ params.workflow_id = 0
 params.num_nodes = 1  /// TODO: use SLURM_JOB_NUM_NODES
 params.node_list = [] /// --node_list node1,node2,node3
 params.script_dir = ""
+params.reference_file_dir = ""
 params.datalife_lib_path = ""  /// TODO: use DataLife library
 params.python_path = ""
 
@@ -24,7 +25,7 @@ params.datamovement_script_dir = ""
 /*
  * Parameters for 1KGenome global settings
  */
-// params.nfs_origin_1kgenome_dir = ""
+params.nfs_origin_data_dir = ""
 // params.nfs_shared_tmp_dir = ""
 // params.WORKSPACE_FOLDER="output.workspace"
 
@@ -32,15 +33,29 @@ params.datamovement_script_dir = ""
 /*
  * Parameters for 1KGenome tasks' storage locations
  */
-params.bowtie2_build_index_Storage_Type = "nfs"
+params.bowtie2_build_Storage_Type = "nfs"
+params.fasterq_dump_Storage_Type = "nfs"
+params.bowtie2_samtools_Storage_Type = "nfs"
+params.samtools_Storage_Type = "nfs"
+params.tar_compress_Storage_Type = "nfs"
 params.process_sra_ids_Storage_Type = "nfs"
 params.siftingmerge_Storage_Type_Storage_Type = "nfs"
 
-params.bowtie2_build_index_Actual_Path = ""
+params.bowtie2_build_Actual_Path = ""
+params.fasterq_dump_Actual_Path = ""
+params.bowtie2_samtools_Actual_Path = ""
+params.samtools_Actual_Path = ""
+params.tar_compress_Actual_Path = ""
 params.process_sra_ids_Actual_Path = ""
 params.merge_Actual_Path = ""
 
-// params.bowtie2_build_index_Copy_To_Path = ""
+params.bowtie2_build_Copy_To_Path = ""
+params.fasterq_dump_Copy_To_Path = ""
+params.bowtie2_samtools_Copy_To_Path = ""
+params.samtools_Copy_To_Path = ""
+params.tar_compress_Copy_To_Path = ""
+
+// params.bowtie2_build_Copy_To_Path = ""
 // params.process_sra_ids_Copy_To_Path = ""
 // params.merge_Copy_To_Path = ""
 
@@ -69,8 +84,8 @@ process sanity_test {
     echo "script_dir: ${params.script_dir}"
     echo "id_list_file: ${params.id_list_file}"
     echo "reference_file: ${params.reference_file}"
-    echo "bowtie2_build_index_Storage_Type: ${params.bowtie2_build_index_Storage_Type}"
-    echo "bowtie2_build_index_Actual_Path: ${params.bowtie2_build_index_Actual_Path}"
+    echo "bowtie2_build_Storage_Type: ${params.bowtie2_build_Storage_Type}"
+    echo "bowtie2_build_Actual_Path: ${params.bowtie2_build_Actual_Path}"
     echo "process_sra_ids_Storage_Type: ${params.process_sra_ids_Storage_Type}"
     echo "process_sra_ids_Actual_Path: ${params.process_sra_ids_Actual_Path}"
     echo "merge_Storage_Type: ${params.merge_Storage_Type}"
@@ -84,79 +99,141 @@ process sanity_test {
 // Workflow Process
 //-------------------
 
-process bowtie2_build_index {
+process bowtie2_build {
     input:
-    val workflow_id
+    // val workflow_id
     val prev_task_successful
 
     output:
     val true, emit: is_successful
 
     script:
-    storage_type = "${params.bowtie2_build_index_Storage_Type}"
-    storage_path = "${params.bowtie2_build_index_Actual_Path}"
-    script_path = "${params.script_dir}/task.bowtie2_build_index.sh"
+    script_path = "${params.script_dir}/task.bowtie2_build.sh"
+    storage_type = "${params.bowtie2_build_Storage_Type}"
+    storage_path = "${params.bowtie2_build_Actual_Path}"
+    copy_to_path = "${params.fasterq_dump_Actual_Path}"
+    file_list_input = "${params.datamovement_script_dir}/file_list.bowtie2_build.input.sh"
+    file_list_output = "${params.datamovement_script_dir}/file_list.bowtie2_build.output.sh"
+    prepare_data_before_script = "${params.datamovement_script_dir}/prepare_data.before.sh"
+    prepare_data_after_script = "${params.datamovement_script_dir}/prepare_data.after.sh"
+
 
     """
     IFS=',' read -ra NODE_LIST <<< "${params.node_list}"
     export NODE_LIST
 
-    if [ ! -d "${storage_path}" ]; then
-        mkdir -p "${storage_path}"
-    fi
+    ###################################
+    # Prepare the data before the task
+    ###################################
+
+    export "FILE_LIST: ${file_list_input}"
+    export "STORAGE_TYPE: ${storage_type}"
+    export "FROM_PATH: ${params.reference_file_dir}"
+    export "TO_PATH: ${storage_path}"
+
+    #
+    # bowtie2_build needs to be done once by one node
+    #
+    set -x
+    srun -w "\${NODE_LIST[0]}" -n1 -N1 --exclusive bash "${prepare_data_before_script}"
+    set +x
+    wait
+
+    # if [ ! -d "${storage_path}" ]; then
+    #     mkdir -p "${storage_path}"
+    # fi
+
+    #################
+    # Run the task
+    #################
     cd "${storage_path}"
     echo ""
     echo "#-------------------------------#"
-    echo "# Task : bowtie2_build_index"
+    echo "# Task : bowtie2_build"
     echo "# current_pwd: \$(pwd)"
     echo "#-------------------------------#"
     echo ""
 
     export REFERENCE="${params.reference_file}"
-    BOWTIE2_BUILD_INDEX_TIME_START=\$(date +%s.%N)
+    export DATALIFE_LIB_PATH="${params.datalife_lib_path}"
+    BOWTIE2_BUILD_TIME_START=\$(date +%s.%N)
     set -x
-    LD_PRELOAD="${params.datalife_lib_path}" DATALIFE_TASK_NAME="bowtie2_build_index" \
-        srun -n1 -N1 --exclusive \
-            bash "${script_path}" &
+    srun -n1 -N1 --exclusive \
+        bash "${script_path}" &
     #bash "${script_path}" &
     set +x
     wait
-    BOWTIE2_BUILD_INDEX_TIME_END=\$(date +%s.%N)
-    BOWTIE2_BUILD_INDEX_TIME_EXE=\$(echo "\${BOWTIE2_BUILD_INDEX_TIME_END} - \${BOWTIE2_BUILD_INDEX_TIME_START}" | bc -l)
+    BOWTIE2_BUILD_TIME_END=\$(date +%s.%N)
+    BOWTIE2_BUILD_TIME_EXE=\$(echo "\${BOWTIE2_BUILD_TIME_END} - \${BOWTIE2_BUILD_TIME_START}" | bc -l)
     echo
-    echo "BOWTIE2_BUILD_INDEX_TIME_EXE(s): \${BOWTIE2_BUILD_INDEX_TIME_EXE}"
+    echo "BOWTIE2_BUILD_TIME_EXE(s): \${BOWTIE2_BUILD_TIME_EXE}"
     echo
+
+    ########################
+    # Move the output files
+    ########################
+    #
+    # If fasterq_dump's storage type is local, NODE_LIST[0] needs to broadcast the reference files to other nodes.
+    #
+
+    export "FILE_LIST: ${file_list_output}"
+    export "STORAGE_TYPE: ${storage_type}"
+    export "FROM_PATH: ${storage_path}"
+    export "TO_PATH: ${copy_to_path}"
+
+    if [ "${params.fasterq_dump_Storage_Type}" = "nfs" ] || \
+       [ "${params.fasterq_dump_Storage_Type}" = "beegfs" ]; then
+        # If fasterq_dump's storage type is shared
+        set -x
+        srun -w "\${NODE_LIST[0]}" -n1 -N1 --exclusive bash "${prepare_data_after_script}"
+        set +x
+        wait
+    else
+        # If fasterq_dump's storage type is local, broadcast the reference files to other nodes
+        for ((node_idx = 0; node_idx < ${params.num_nodes}; node_idx++)); do
+            running_node="\${NODE_LIST[\$node_idx]}"
+
+            set -x
+            srun -w "\$running_node" -n1 -N1 --exclusive bash "${prepare_data_after_script}"
+            set +x
+        done
+        wait
+    fi
     """
 }
 
 process process_sra_ids {
     input:
-    val workflow_id
+    // val workflow_id
     val prev_task_successful
 
     output:
     val true, emit: is_successful
 
     script:
-    storage_type = "${params.process_sra_ids_Storage_Type}"
-    storage_path = "${params.process_sra_ids_Actual_Path}"
     script_path = "${params.script_dir}/task.process_sra_ids.sh"
+    storage_type = "${params.fasterq_dump_Actual_Path}"
+    storage_path = "${params.process_sra_ids_Actual_Path}"
+    copy_to_path = "${params.tar_compress_Actual_Path}"
+    file_list_input = "${params.datamovement_script_dir}/file_list.fasterq_dump.input.sh"
+    file_list_output = "${params.datamovement_script_dir}/file_list.process_sra_ids.output.sh"
+    prepare_data_before_script = "${params.datamovement_script_dir}/prepare_data.before.sh"
+    prepare_data_after_script = "${params.datamovement_script_dir}/prepare_data.after.sh"
+
 
     """
     IFS=',' read -ra NODE_LIST <<< "${params.node_list}"
     export NODE_LIST
     NUM_NODES=${params.num_nodes}
 
-    if [ ! -d "${storage_path}" ]; then
-        mkdir -p "${storage_path}"
-    fi
-    cd "${storage_path}"
-    echo ""
-    echo "#-----------------------#"
-    echo "# Task : process_sra_ids"
-    echo "# current_pwd: \$(pwd)"
-    echo "#-----------------------#"
-    echo ""
+    ###################################
+    # Prepare the data before the task
+    ###################################
+
+    export "FILE_LIST: ${file_list_input}"
+    export "STORAGE_TYPE: ${storage_type}"
+    export "FROM_PATH: ${params.nfs_origin_data_dir}"
+    export "TO_PATH: ${storage_path}"
 
     # Read SRA IDs, skipping short/empty lines
     set -x
@@ -174,16 +251,44 @@ process process_sra_ids {
     echo
     echo "num_ids: \${num_ids}"
     echo
-    PROCESS_SRA_TIME_START=\$(date +%s.%N)
-    batch_size=\$((NUM_NODES * 8))
+
     for ((id = 0; id < num_ids; id++)); do
         export SRA_ID="\${SRA_IDS[\$id]}"
         node_idx=\$((id % NUM_NODES))
         running_node="\${NODE_LIST[\$node_idx]}"
         set -x
-        LD_PRELOAD="${params.datalife_lib_path}" DATALIFE_TASK_NAME="process_sra_ids" \
-            srun -w "\${running_node}" -n1 -N1 --exclusive \
-                bash "${script_path}" &
+        srun -w "\${running_node}" -n1 -N1 --exclusive \
+            bash "${prepare_data_before_script}" &
+        set +x
+    done
+    wait
+
+    # if [ ! -d "${storage_path}" ]; then
+    #     mkdir -p "${storage_path}"
+    # fi
+
+    #################
+    # Run the task
+    #################
+
+    cd "${storage_path}"
+    echo ""
+    echo "#-----------------------#"
+    echo "# Task : process_sra_ids"
+    echo "# current_pwd: \$(pwd)"
+    echo "#-----------------------#"
+    echo ""
+
+    export DATALIFE_LIB_PATH="${params.datalife_lib_path}"
+    PROCESS_SRA_TIME_START=\$(date +%s.%N)
+    batch_size=\$((NUM_NODES * 8))  # Use batch limit to avoid fasterq-dump to crash
+    for ((id = 0; id < num_ids; id++)); do
+        export SRA_ID="\${SRA_IDS[\$id]}"
+        node_idx=\$((id % NUM_NODES))
+        running_node="\${NODE_LIST[\$node_idx]}"
+        set -x
+        srun -w "\${running_node}" -n1 -N1 --exclusive \
+            bash "${script_path}" &
         # bash "${script_path}" &
         set +x
 
@@ -207,30 +312,72 @@ process process_sra_ids {
     echo
     echo "PROCESS_SRA_TIME_EXE(s): \${PROCESS_SRA_TIME_EXE}"
     echo
+
+    ########################
+    # Move the output files
+    ########################
+    #
+    # Assume tar_compress's storage type is nfs or beegfs, because
+    # 1. `*.bam` and `*.bam.bai` files are generated on multiple nodes. Merging them needs to access all files.
+    # 2. Merging phase time is short compared to the whole workflow time.
+    #
+    export "FILE_LIST: ${file_list_output}"
+    export "STORAGE_TYPE: ${storage_type}"
+    export "FROM_PATH: ${storage_path}"
+    export "TO_PATH: ${copy_to_path}"
+
+    for ((id = 0; id < num_ids; id++)); do
+        export SRA_ID="\${SRA_IDS[\$id]}"
+        node_idx=\$((id % NUM_NODES))
+        running_node="\${NODE_LIST[\$node_idx]}"
+        set -x
+        srun -w "\${running_node}" -n1 -N1 --exclusive \
+            bash "${prepare_data_before_script}" &
+        set +x
+    done
+    wait
     """
 }
 
+
 process merge_files {
     input:
-    val workflow_id
+    // val workflow_id
     val prev_task_successful
 
     output:
     val true, emit: is_successful
 
     script:
-    storage_type = "${params.merge_Storage_Type}"
-    storage_path = "${params.merge_Actual_Path}"
     script_path = "${params.script_dir}/task.merge.sh"
+    storage_type = "${params.tar_compress_Storage_Type}"
+    storage_path = "${params.tar_compress_Actual_Path}"
+    copy_to_path = "${params.tar_compress_Copy_To_Path}"
+    file_list_input = "${params.datamovement_script_dir}/file_list.tar_compress.input.sh"
+    file_list_output = "${params.datamovement_script_dir}/file_list.tar_compress.output.sh"
+    prepare_data_before_script = "${params.datamovement_script_dir}/prepare_data.before.sh"
+    prepare_data_after_script = "${params.datamovement_script_dir}/prepare_data.after.sh"
+
 
     """
     IFS=',' read -ra NODE_LIST <<< "${params.node_list}"
     export NODE_LIST
     NUM_NODES=${params.num_nodes}
 
-    if [ ! -d "${storage_path}" ]; then
-        mkdir -p "${storage_path}"
-    fi
+    ###################################
+    # Prepare the data before the task
+    ###################################
+    #
+    # Assume tar_compress's storage type is nfs or beegfs, and no initial inputs, so no need to prepare data.
+    #
+
+    # if [ ! -d "${storage_path}" ]; then
+    #     mkdir -p "${storage_path}"
+    # fi
+
+    #################
+    # Run the task
+    #################
     cd "${storage_path}"
     echo ""
     echo "#-----------------------#"
@@ -239,6 +386,7 @@ process merge_files {
     echo "#-----------------------#"
     echo ""
 
+    export DATALIFE_LIB_PATH="${params.datalife_lib_path}"
     MERGE_TIME_START=\$(date +%s.%N)
 
     BAM_FILES=(*.bam *.bam.bai)
@@ -272,9 +420,8 @@ process merge_files {
             node_idx=\$((job_count % NUM_NODES))
             running_node="\${NODE_LIST[\$node_idx]}"
             set -x
-            LD_PRELOAD="${params.datalife_lib_path}" DATALIFE_TASK_NAME="merge_files"
-                srun -w "\${running_node}" -n1 -N1 --exclusive \
-                    bash "${script_path}" "\$out_file" "\${chunk[@]}" &
+            srun -w "\${running_node}" -n1 -N1 --exclusive \
+                bash "${script_path}" "\$out_file" "\${chunk[@]}" &
             #bash "${script_path}" "\$out_file" "\${chunk[@]}" &
             set +x
             children+=("\$out_file")
@@ -290,18 +437,59 @@ process merge_files {
     echo
     echo "MERGE_TIME_EXE(s): \${MERGE_TIME_EXE}"
     echo
+
+    ########################
+    # Move the output files
+    ########################
+    #
+    # tar_compress is the last task, so no need to move the output files.
+    #
     """
 }
+
+process cleanup {
+    input:
+    val start1
+
+    output:
+    val true, emit: is_successful
+
+    script:
+    """
+    export BOWTIE2_BUILD_STORAGE_PATH="${params.bowtie2_build_Actual_Path}"
+    export FASTERQ_DUMP_STORAGE_PATH="${params.fasterq_dump_Actual_Path}"
+    export BOWTIE2_SAMTOOLS_STORAGE_PATH="${params.bowtie2_samtools_Actual_Path}"
+    export SAMTOOLS_STORAGE_PATH="${params.samtools_Actual_Path}"
+    export TAR_COMPRESS_STORAGE_PATH="${params.tar_compress_Actual_Path}"
+    IFS=',' read -ra NODE_LIST <<< "${params.node_list}"
+    script="${params.datamovement_script_dir}/cleanup_data.sh"
+
+    #################################
+    # Clean up the data on each node
+    #################################
+    bound=\$((${params.num_nodes} - 1))
+    for node_idx in \$(seq 0 \${bound}); do
+        running_node="\${NODE_LIST[\$node_idx]}"
+
+        set -x
+        srun -w "\$running_node" -n1 -N1 --exclusive bash "\${script}"
+        set +x
+    done
+    wait
+
+    """
+}
+
 
 workflow {
     /* Sanity Test */
     sanity_test()
 
     /* Fake 1KGenome Workflow */
-    bowtie2_build_index(params.workflow_id, sanity_test.out.is_successful)
-    process_sra_ids(params.workflow_id, bowtie2_build_index.out.is_successful)
-    merge_files(params.workflow_id, process_sra_ids.out.is_successful)
+    bowtie2_build(sanity_test.out.is_successful)
+    process_sra_ids(bowtie2_build.out.is_successful)
+    merge_files(process_sra_ids.out.is_successful)
 
-    // cleanup(mutation_overlap.out.is_successful, frequency.out.is_successful)
+    cleanup(merge_files.out.is_successful)
 
 }

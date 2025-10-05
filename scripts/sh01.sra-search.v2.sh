@@ -54,18 +54,18 @@ echo "#################################"
 echo
 # Build bowtie2 index
 export REFERENCE
-BOWTIE2_BUILD_INDEX_TIME_START=$(date +%s.%N)
+BOWTIE2_BUILD_TIME_START=$(date +%s.%N)
 set -x
 # bowtie2-build "$REFERENCE" reference
-# LD_PRELOAD="${DATALIFE_LIB_PATH}" DATALIFE_TASK_NAME="bowtie2_build_index" \
+# LD_PRELOAD="${DATALIFE_LIB_PATH}" DATALIFE_TASK_NAME="bowtie2_build" \
     srun -n1 -N1 --exclusive \
-        bash "${SCRIPT_DIR}/task.bowtie2_build_index.sh" &
+        bash "${SCRIPT_DIR}/task.bowtie2_build.sh" &
 set +x
 wait
-BOWTIE2_BUILD_INDEX_TIME_END=$(date +%s.%N)
-BOWTIE2_BUILD_INDEX_TIME_EXE=$(echo "${BOWTIE2_BUILD_INDEX_TIME_END} - ${BOWTIE2_BUILD_INDEX_TIME_START}" | bc -l)
+BOWTIE2_BUILD_TIME_END=$(date +%s.%N)
+BOWTIE2_BUILD_TIME_EXE=$(echo "${BOWTIE2_BUILD_TIME_END} - ${BOWTIE2_BUILD_TIME_START}" | bc -l)
 echo
-echo "BOWTIE2_BUILD_INDEX_TIME_EXE(s): ${BOWTIE2_BUILD_INDEX_TIME_EXE}"
+echo "BOWTIE2_BUILD_TIME_EXE(s): ${BOWTIE2_BUILD_TIME_EXE}"
 echo
 
 

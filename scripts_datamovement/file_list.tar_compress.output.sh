@@ -1,0 +1,3 @@
+FILES=(
+    "results.tar.gz"
+)
