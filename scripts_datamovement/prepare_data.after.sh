@@ -39,7 +39,7 @@ for file_name in "${FILES[@]}"; do
         if [ -e "${dst_path}" ]; then
             echo "File ${file_name} already exists in ${TO_PATH}, skipping copy."
         else
-            cp "${file_name}" "${TO_PATH}/" || echo "Skip copying ${file_name} to ${TO_PATH} due to other processors."
+            cp -r "${file_name}" "${TO_PATH}/" || echo "Skip copying ${file_name} to ${TO_PATH} due to other processors."
             echo "Copied ${file_name} to ${TO_PATH}"
         fi
     else

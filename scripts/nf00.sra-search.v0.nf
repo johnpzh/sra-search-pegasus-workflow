@@ -116,6 +116,7 @@ process bowtie2_build {
     file_list_output = "${params.datamovement_scripts_dir}/file_list.bowtie2_build.output.sh"
     prepare_data_before_script = "${params.datamovement_scripts_dir}/prepare_data.before.sh"
     prepare_data_after_script = "${params.datamovement_scripts_dir}/prepare_data.after.sh"
+    prepare_data_scp_script = "${params.datamovement_scripts_dir}/prepare_data.scp.sh"
 
 
     """
@@ -166,8 +167,8 @@ process bowtie2_build {
     export DATALIFE_LIB_PATH="${params.datalife_lib_path}"
     BOWTIE2_BUILD_TIME_START=\$(date +%s.%N)
     set -x
-    # srun -n1 -N1 --exclusive bash "${script_path}" &
-    bash "${script_path}" &
+    srun -w "\${NODE_LIST[0]}" -n1 -N1 --exclusive bash "${script_path}" &
+    # bash "${script_path}" &
     set +x
     wait
     BOWTIE2_BUILD_TIME_END=\$(date +%s.%N)
@@ -185,12 +186,13 @@ process bowtie2_build {
 
     export FILE_LIST="${file_list_output}"
     export STORAGE_TYPE="${storage_type}"
-    export FROM_PATH="${storage_path}"
-    export TO_PATH="${copy_to_path}"
 
     if [ "${params.fasterq_dump_Storage_Type}" = "nfs" ] || \
        [ "${params.fasterq_dump_Storage_Type}" = "beegfs" ]; then
         # If fasterq_dump's storage type is shared
+
+        export FROM_PATH="${storage_path}"
+        export TO_PATH="${copy_to_path}"
         set -x
         srun -w "\${NODE_LIST[0]}" -n1 -N1 --exclusive bash "${prepare_data_after_script}" &
         # bash "${prepare_data_after_script}" &
@@ -198,12 +200,14 @@ process bowtie2_build {
         wait
     else
         # If fasterq_dump's storage type is local, broadcast the reference files to other nodes
-        for ((node_idx = 0; node_idx < ${params.num_nodes}; node_idx++)); do
-            running_node="\${NODE_LIST[\$node_idx]}"
 
+        export FROM_PATH="${storage_path}"
+        export TO_PATH="${copy_to_path}"
+        for ((node_idx = 1; node_idx < ${params.num_nodes}; node_idx++)); do
+            export DEST_NODE="\${NODE_LIST[\$node_idx]}"
             set -x
-            srun -w "\$running_node" -n1 -N1 --exclusive bash "${prepare_data_after_script}" &
-            # bash "${prepare_data_after_script}" &
+            srun -w "\${NODE_LIST[0]}" -n1 -N1 --exclusive bash "${prepare_data_scp_script}" &
+            # bash "${prepare_data_scp_script}" &
             set +x
         done
         wait

@@ -4,7 +4,7 @@
 ######SBATCH --partition=short
 ######SBATCH --exclude=dc[119,077]
 #SBATCH --account=oddite
-#SBATCH -N 1
+#SBATCH -N 4
 ######SBATCH --time=01:01:01
 #SBATCH --time=44:44:44
 #SBATCH --output=output.%x.%j.out.log
