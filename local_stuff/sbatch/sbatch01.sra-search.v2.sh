@@ -27,7 +27,7 @@ module purge
 # module load rocm/5.6.0
 #module load cuda/12.3
 # Modules needed by Orca
-module load gcc/11.2.0 binutils/2.35 cmake/3.29.0
+module load gcc/11.2.0 binutils/2.35 cmake/3.29.0 python/miniconda25.5.1
 #module load openmpi/4.1.4
 #module load mkl
 module list &> _modules.lis_
@@ -35,6 +35,9 @@ cat _modules.lis_
 /bin/rm -f _modules.lis_
 
 #Python version
+source /share/apps/python/miniconda25.5.1/etc/profile.d/conda.sh
+eval "$(conda shell.bash hook)"
+conda activate pp
 echo
 echo "python version"
 echo

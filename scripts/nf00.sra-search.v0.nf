@@ -20,7 +20,7 @@ params.python_path = ""
  * Pipeline parameters static
  */
 
-params.datamovement_script_dir = ""
+params.datamovement_scripts_dir = ""
 
 /*
  * Parameters for 1KGenome global settings
@@ -38,16 +38,12 @@ params.fasterq_dump_Storage_Type = "nfs"
 params.bowtie2_samtools_Storage_Type = "nfs"
 params.samtools_Storage_Type = "nfs"
 params.tar_compress_Storage_Type = "nfs"
-params.process_sra_ids_Storage_Type = "nfs"
-params.siftingmerge_Storage_Type_Storage_Type = "nfs"
 
 params.bowtie2_build_Actual_Path = ""
 params.fasterq_dump_Actual_Path = ""
 params.bowtie2_samtools_Actual_Path = ""
 params.samtools_Actual_Path = ""
 params.tar_compress_Actual_Path = ""
-params.process_sra_ids_Actual_Path = ""
-params.merge_Actual_Path = ""
 
 params.bowtie2_build_Copy_To_Path = ""
 params.fasterq_dump_Copy_To_Path = ""
@@ -86,10 +82,14 @@ process sanity_test {
     echo "reference_file: ${params.reference_file}"
     echo "bowtie2_build_Storage_Type: ${params.bowtie2_build_Storage_Type}"
     echo "bowtie2_build_Actual_Path: ${params.bowtie2_build_Actual_Path}"
-    echo "process_sra_ids_Storage_Type: ${params.process_sra_ids_Storage_Type}"
-    echo "process_sra_ids_Actual_Path: ${params.process_sra_ids_Actual_Path}"
-    echo "merge_Storage_Type: ${params.merge_Storage_Type}"
-    echo "merge_Actual_Path: ${params.merge_Actual_Path}"
+    echo "fasterq_dump_Storage_Type: ${params.fasterq_dump_Storage_Type}"
+    echo "fasterq_dump_Actual_Path: ${params.fasterq_dump_Actual_Path}"
+    echo "bowtie2_samtools_Storage_Type: ${params.bowtie2_samtools_Storage_Type}"
+    echo "bowtie2_samtools_Actual_Path: ${params.bowtie2_samtools_Actual_Path}"
+    echo "samtools_Storage_Type: ${params.samtools_Storage_Type}"
+    echo "samtools_Actual_Path: ${params.samtools_Actual_Path}"
+    echo "tar_compress_Storage_Type: ${params.tar_compress_Storage_Type}"
+    echo "tar_compress_Actual_Path: ${params.tar_compress_Actual_Path}"
     """
     // result = "world"  /* Will not work, because the last command in script should be a string. */
 
@@ -112,10 +112,10 @@ process bowtie2_build {
     storage_type = "${params.bowtie2_build_Storage_Type}"
     storage_path = "${params.bowtie2_build_Actual_Path}"
     copy_to_path = "${params.fasterq_dump_Actual_Path}"
-    file_list_input = "${params.datamovement_script_dir}/file_list.bowtie2_build.input.sh"
-    file_list_output = "${params.datamovement_script_dir}/file_list.bowtie2_build.output.sh"
-    prepare_data_before_script = "${params.datamovement_script_dir}/prepare_data.before.sh"
-    prepare_data_after_script = "${params.datamovement_script_dir}/prepare_data.after.sh"
+    file_list_input = "${params.datamovement_scripts_dir}/file_list.bowtie2_build.input.sh"
+    file_list_output = "${params.datamovement_scripts_dir}/file_list.bowtie2_build.output.sh"
+    prepare_data_before_script = "${params.datamovement_scripts_dir}/prepare_data.before.sh"
+    prepare_data_after_script = "${params.datamovement_scripts_dir}/prepare_data.after.sh"
 
 
     """
@@ -126,16 +126,24 @@ process bowtie2_build {
     # Prepare the data before the task
     ###################################
 
-    export "FILE_LIST: ${file_list_input}"
-    export "STORAGE_TYPE: ${storage_type}"
-    export "FROM_PATH: ${params.reference_file_dir}"
-    export "TO_PATH: ${storage_path}"
+    export FILE_LIST="${file_list_input}"
+    export STORAGE_TYPE="${storage_type}"
+    export FROM_PATH="${params.reference_file_dir}"
+    export TO_PATH="${storage_path}"
+
+    # test
+    set -x
+    echo "#### PWD ####"
+    echo \$(pwd)
+    set +x
+    # end test
 
     #
     # bowtie2_build needs to be done once by one node
     #
     set -x
-    srun -w "\${NODE_LIST[0]}" -n1 -N1 --exclusive bash "${prepare_data_before_script}"
+    srun -w "\${NODE_LIST[0]}" -n1 -N1 --exclusive bash "${prepare_data_before_script}" &
+    # bash "${prepare_data_before_script}" &
     set +x
     wait
 
@@ -158,9 +166,8 @@ process bowtie2_build {
     export DATALIFE_LIB_PATH="${params.datalife_lib_path}"
     BOWTIE2_BUILD_TIME_START=\$(date +%s.%N)
     set -x
-    srun -n1 -N1 --exclusive \
-        bash "${script_path}" &
-    #bash "${script_path}" &
+    # srun -n1 -N1 --exclusive bash "${script_path}" &
+    bash "${script_path}" &
     set +x
     wait
     BOWTIE2_BUILD_TIME_END=\$(date +%s.%N)
@@ -176,16 +183,17 @@ process bowtie2_build {
     # If fasterq_dump's storage type is local, NODE_LIST[0] needs to broadcast the reference files to other nodes.
     #
 
-    export "FILE_LIST: ${file_list_output}"
-    export "STORAGE_TYPE: ${storage_type}"
-    export "FROM_PATH: ${storage_path}"
-    export "TO_PATH: ${copy_to_path}"
+    export FILE_LIST="${file_list_output}"
+    export STORAGE_TYPE="${storage_type}"
+    export FROM_PATH="${storage_path}"
+    export TO_PATH="${copy_to_path}"
 
     if [ "${params.fasterq_dump_Storage_Type}" = "nfs" ] || \
        [ "${params.fasterq_dump_Storage_Type}" = "beegfs" ]; then
         # If fasterq_dump's storage type is shared
         set -x
-        srun -w "\${NODE_LIST[0]}" -n1 -N1 --exclusive bash "${prepare_data_after_script}"
+        srun -w "\${NODE_LIST[0]}" -n1 -N1 --exclusive bash "${prepare_data_after_script}" &
+        # bash "${prepare_data_after_script}" &
         set +x
         wait
     else
@@ -194,7 +202,8 @@ process bowtie2_build {
             running_node="\${NODE_LIST[\$node_idx]}"
 
             set -x
-            srun -w "\$running_node" -n1 -N1 --exclusive bash "${prepare_data_after_script}"
+            srun -w "\$running_node" -n1 -N1 --exclusive bash "${prepare_data_after_script}" &
+            # bash "${prepare_data_after_script}" &
             set +x
         done
         wait
@@ -212,28 +221,29 @@ process process_sra_ids {
 
     script:
     script_path = "${params.script_dir}/task.process_sra_ids.sh"
-    storage_type = "${params.fasterq_dump_Actual_Path}"
-    storage_path = "${params.process_sra_ids_Actual_Path}"
+    storage_type = "${params.fasterq_dump_Storage_Type}"
+    storage_path = "${params.fasterq_dump_Actual_Path}"
     copy_to_path = "${params.tar_compress_Actual_Path}"
-    file_list_input = "${params.datamovement_script_dir}/file_list.fasterq_dump.input.sh"
-    file_list_output = "${params.datamovement_script_dir}/file_list.process_sra_ids.output.sh"
-    prepare_data_before_script = "${params.datamovement_script_dir}/prepare_data.before.sh"
-    prepare_data_after_script = "${params.datamovement_script_dir}/prepare_data.after.sh"
+    file_list_input = "${params.datamovement_scripts_dir}/file_list.fasterq_dump.input.sh"
+    file_list_output = "${params.datamovement_scripts_dir}/file_list.process_sra_ids.output.sh"
+    prepare_data_before_script = "${params.datamovement_scripts_dir}/prepare_data.before.sh"
+    prepare_data_after_script = "${params.datamovement_scripts_dir}/prepare_data.after.sh"
 
 
     """
     IFS=',' read -ra NODE_LIST <<< "${params.node_list}"
     export NODE_LIST
     NUM_NODES=${params.num_nodes}
+    export NEXTFLOW_ON="on"
 
     ###################################
     # Prepare the data before the task
     ###################################
 
-    export "FILE_LIST: ${file_list_input}"
-    export "STORAGE_TYPE: ${storage_type}"
-    export "FROM_PATH: ${params.nfs_origin_data_dir}"
-    export "TO_PATH: ${storage_path}"
+    export FILE_LIST="${file_list_input}"
+    export STORAGE_TYPE="${storage_type}"
+    export FROM_PATH="${params.nfs_origin_data_dir}"
+    export TO_PATH="${storage_path}"
 
     # Read SRA IDs, skipping short/empty lines
     set -x
@@ -257,8 +267,8 @@ process process_sra_ids {
         node_idx=\$((id % NUM_NODES))
         running_node="\${NODE_LIST[\$node_idx]}"
         set -x
-        srun -w "\${running_node}" -n1 -N1 --exclusive \
-            bash "${prepare_data_before_script}" &
+        srun -w "\${running_node}" -n1 -N1 --exclusive bash "${prepare_data_before_script}" &
+        # bash "${prepare_data_before_script}" &
         set +x
     done
     wait
@@ -287,8 +297,7 @@ process process_sra_ids {
         node_idx=\$((id % NUM_NODES))
         running_node="\${NODE_LIST[\$node_idx]}"
         set -x
-        srun -w "\${running_node}" -n1 -N1 --exclusive \
-            bash "${script_path}" &
+        srun -w "\${running_node}" -n1 -N1 --exclusive bash "${script_path}" &
         # bash "${script_path}" &
         set +x
 
@@ -301,7 +310,7 @@ process process_sra_ids {
         echo
         echo "Current job count: \$((id + 1))"
         echo "Current running jobs number: \$(jobs -r | wc -l) / \${batch_size}"
-        echo "Current open files number: \$(lsof -p $$ | wc -l)"
+        echo "Current open files number: \$(lsof -p \$\$ | wc -l)"
         echo
         # end test
     done
@@ -321,18 +330,18 @@ process process_sra_ids {
     # 1. `*.bam` and `*.bam.bai` files are generated on multiple nodes. Merging them needs to access all files.
     # 2. Merging phase time is short compared to the whole workflow time.
     #
-    export "FILE_LIST: ${file_list_output}"
-    export "STORAGE_TYPE: ${storage_type}"
-    export "FROM_PATH: ${storage_path}"
-    export "TO_PATH: ${copy_to_path}"
+    export FILE_LIST="${file_list_output}"
+    export STORAGE_TYPE="${storage_type}"
+    export FROM_PATH="${storage_path}"
+    export TO_PATH="${copy_to_path}"
 
     for ((id = 0; id < num_ids; id++)); do
         export SRA_ID="\${SRA_IDS[\$id]}"
         node_idx=\$((id % NUM_NODES))
         running_node="\${NODE_LIST[\$node_idx]}"
         set -x
-        srun -w "\${running_node}" -n1 -N1 --exclusive \
-            bash "${prepare_data_before_script}" &
+        srun -w "\${running_node}" -n1 -N1 --exclusive bash "${prepare_data_after_script}" &
+        # bash "${prepare_data_after_script}" &
         set +x
     done
     wait
@@ -353,10 +362,10 @@ process merge_files {
     storage_type = "${params.tar_compress_Storage_Type}"
     storage_path = "${params.tar_compress_Actual_Path}"
     copy_to_path = "${params.tar_compress_Copy_To_Path}"
-    file_list_input = "${params.datamovement_script_dir}/file_list.tar_compress.input.sh"
-    file_list_output = "${params.datamovement_script_dir}/file_list.tar_compress.output.sh"
-    prepare_data_before_script = "${params.datamovement_script_dir}/prepare_data.before.sh"
-    prepare_data_after_script = "${params.datamovement_script_dir}/prepare_data.after.sh"
+    file_list_input = "${params.datamovement_scripts_dir}/file_list.tar_compress.input.sh"
+    file_list_output = "${params.datamovement_scripts_dir}/file_list.tar_compress.output.sh"
+    prepare_data_before_script = "${params.datamovement_scripts_dir}/prepare_data.before.sh"
+    prepare_data_after_script = "${params.datamovement_scripts_dir}/prepare_data.after.sh"
 
 
     """
@@ -420,9 +429,8 @@ process merge_files {
             node_idx=\$((job_count % NUM_NODES))
             running_node="\${NODE_LIST[\$node_idx]}"
             set -x
-            srun -w "\${running_node}" -n1 -N1 --exclusive \
-                bash "${script_path}" "\$out_file" "\${chunk[@]}" &
-            #bash "${script_path}" "\$out_file" "\${chunk[@]}" &
+            srun -w "\${running_node}" -n1 -N1 --exclusive bash "${script_path}" "\$out_file" "\${chunk[@]}" &
+            # bash "${script_path}" "\$out_file" "\${chunk[@]}" &
             set +x
             children+=("\$out_file")
         done
@@ -462,7 +470,7 @@ process cleanup {
     export SAMTOOLS_STORAGE_PATH="${params.samtools_Actual_Path}"
     export TAR_COMPRESS_STORAGE_PATH="${params.tar_compress_Actual_Path}"
     IFS=',' read -ra NODE_LIST <<< "${params.node_list}"
-    script="${params.datamovement_script_dir}/cleanup_data.sh"
+    script="${params.datamovement_scripts_dir}/cleanup_data.sh"
 
     #################################
     # Clean up the data on each node
@@ -472,7 +480,8 @@ process cleanup {
         running_node="\${NODE_LIST[\$node_idx]}"
 
         set -x
-        srun -w "\$running_node" -n1 -N1 --exclusive bash "\${script}"
+        srun -w "\$running_node" -n1 -N1 --exclusive bash "\${script}" &
+        # bash "\${script}" &
         set +x
     done
     wait

@@ -1,3 +1,3 @@
 FILES=(
-    "${SRA_ID}.sra"
+    "${SRA_ID}/"
 )

@@ -1,10 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name="sra_nf_v1"
 #SBATCH --partition=slurm
+######SBATCH --partition=short
 ######SBATCH --exclude=dc[119,077]
-#SBATCH --account=datamesh
+#SBATCH --account=oddite
 #SBATCH -N 1
-#SBATCH --time=04:44:44
+######SBATCH --time=01:01:01
+#SBATCH --time=44:44:44
 #SBATCH --output=output.%x.%j.out.log
 #SBATCH --error=output.%x.%j.err.log
 #SBATCH --mail-type=FAIL
@@ -23,12 +25,15 @@ echo
 echo "loaded modules"
 echo
 module purge
-module load java/24.0.2
+module load java/24.0.2 python/miniconda25.5.1
 module list &> _modules.lis_
 cat _modules.lis_
 /bin/rm -f _modules.lis_
 
 #Python version
+source /share/apps/python/miniconda25.5.1/etc/profile.d/conda.sh
+eval "$(conda shell.bash hook)"
+conda activate pp
 echo
 echo "python version"
 echo
@@ -74,8 +79,10 @@ printenv
 
 set -euo pipefail
 
-SLURM_JOB_ID=111
-SLURM_JOB_NUM_NODES=1
+# # Shell testing
+# SLURM_JOB_ID=111
+# SLURM_JOB_NUM_NODES=1
+# # End Shell testing
 
 export PREV_PWD=$(readlink -f .)
 export DATALIFE_LIB_PATH="/qfs/projects/oddite/peng599/FlowForecaster/datalife_Candice/build/flow-monitor/src/libmonitor.so"
@@ -93,15 +100,15 @@ reference.2.bt2, reference.3.bt2, reference.4.bt2, reference.rev.1.bt2, referenc
 *.fastq, *.bam, *.bam.bai \
 "
 
-NUM_TESTS=1
+NUM_TESTS=10
 NF_WORKSPACE="output.nf.workspace.${SLURM_JOB_ID}.$(date +%FT%T)"
-NF_SCRIPT="../scripts/nf00.sra-search.v0.nf"
-WORKFLOW_SCRIPTS_DIR="../scripts"
-DATAMOVEMENT_SCRIPTS_DIR="../scripts_datamovement"
-REFERENCE_FILE_DIR="../tests/${NUM_TESTS}"
+NF_SCRIPT="${PREV_PWD}/../scripts/nf00.sra-search.v0.nf"
+WORKFLOW_SCRIPTS_DIR="${PREV_PWD}/../scripts"
+DATAMOVEMENT_SCRIPTS_DIR="${PREV_PWD}/../scripts_datamovement"
+REFERENCE_FILE_DIR="${PREV_PWD}/../tests/${NUM_TESTS}"
 ID_LIST_FILE="${REFERENCE_FILE_DIR}/sra_ids.txt"
 REFERENCE_FILE="${REFERENCE_FILE_DIR}/crassphage.fna"
-NFS_ORIGIN_DATA_DIR="../data"
+NFS_ORIGIN_DATA_DIR="${PREV_PWD}/../data"
 rm -rf "${DATALIFE_OUTPUT_PATH}"
 mkdir -p "${DATALIFE_OUTPUT_PATH}"
 
@@ -117,6 +124,7 @@ if [ -v SLURM_JOB_NODELIST ]; then
     echo "NODES_STRING: $NODES_STRING"
 else
     NODES_STRING=""
+    SLURM_JOB_NODELIST=""
 fi
 
 echo
@@ -133,29 +141,26 @@ TT_TIME_START=$(date +%s.%N)
 #####################################################################################
 # 1. Run SPM Linux storage explorer (only need running once), get all storage paths.
 #####################################################################################
-local_dir_config="local_dir_config.csv"
+LOCAL_DIR_CONFIG="local_dir_config.csv"
 
 ###############################
 # 2. run SPM, dump the ranking
 ###############################
-spm_results_file="workflow_spm_results/sra_search_filtered_spm_results.v0.4n_999ids.csv"
+SPM_RESULTS_FILE="workflow_spm_results/sra_search_filtered_spm_results.v0.4n_999ids.csv"
 
 ##############################################################################
 # 3. Run Storage Selection Algorithm, output the storage selections for tasks.
 ##############################################################################
-storage_config_file="nextflow.config.params.storage.nf"
+STORAGE_CONFIG_FILE="nextflow.config.params.storage.nf"
 python ../scripts/py01.select_storage_type_from_spm.sra_search.v1.py \
-    -s "${spm_results_file}" \
-    -l "${local_dir_config}" \
-    -o "${storage_config_file}"
+    -s "${SPM_RESULTS_FILE}" \
+    -l "${LOCAL_DIR_CONFIG}" \
+    -o "${STORAGE_CONFIG_FILE}"
 
 ########################################################################################
 # 4. Pass the paths to Nextflow, and run Nextflow. Do data movement based on the paths.
 ########################################################################################
 set -x
-# mkdir "${WORKSPACE}"
-# cd "${WORKSPACE}"
-# bash "${NF_SCRIPT}" "${ID_LIST_FILE}" "${REFERENCE_FILE}" 2>&1 | tee "${output}"
 nextflow run "${NF_SCRIPT}" \
     --id_list_file "${ID_LIST_FILE}" \
     --reference_file "${REFERENCE_FILE}" \
@@ -169,9 +174,16 @@ nextflow run "${NF_SCRIPT}" \
     --nfs_origin_data_dir "${NFS_ORIGIN_DATA_DIR}" \
     -c "${STORAGE_CONFIG_FILE}" \
     -work-dir "${NF_WORKSPACE}" \
-    -ansi-log false \
-
+    -ansi-log false
 set +x
+
+######################
+# Show all job states
+######################
+echo
+echo "Job State Summary:"
+hostname;date;
+sacct -j $SLURM_JOB_ID -o jobid,submit,start,end,state
 
 TT_TIME_END=$(date +%s.%N)
 TT_TIME_EXE=$(echo "${TT_TIME_END} - ${TT_TIME_START}" | bc -l)

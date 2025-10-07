@@ -8,6 +8,8 @@ workflow.yml
 # Output
 output.*
 output_*
+.nextflow/
+.nextflow.log*
 
 # Data
 datalife_stats*/

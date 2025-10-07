@@ -38,7 +38,7 @@ if [ ! "${STORAGE_TYPE}" = "nfs" ] && [ ! "${STORAGE_TYPE}" = "beegfs" ]; then
             fi
 
             if [ -n "${src_path}" ]; then
-                cp "${src_path}" "." || echo "Skip copying ${file_name} to ${TO_PATH} due to other processors."
+                cp -r "${src_path}" "." || echo "Skip copying ${file_name} to ${TO_PATH} due to other processors."
                 echo "Copied ${src_path} to ${TO_PATH}"
             else
                 echo "Error: Source path for ${file_name} is empty, cannot copy to ${TO_PATH}."

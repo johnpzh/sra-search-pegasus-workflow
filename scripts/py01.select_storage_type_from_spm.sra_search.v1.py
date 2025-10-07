@@ -282,8 +282,15 @@ def map_type_to_path(storage_type_dict: dict, local_dir_config: str) -> dict:
             storage_type_dict[task] = 'nfs'
         else:
             assert False, f"Error: cannot find the cooresponding path for the given storage type {storage_type}."
-
         storage_path_dict[task] = path
+
+    # for task, storage_type in storage_type_dict.items():
+    #     if not df[df['Type'] == 'nfs'].empty:
+    #         path = df[df['Type'] == 'nfs']['Actual_Path'].iloc[0]
+    #         storage_type_dict[task] = 'nfs'
+    #     else:
+    #         assert False, f"Error: cannot find the cooresponding path for the given storage type {storage_type}."
+    #     storage_path_dict[task] = path
 
     # test
     print("storage_type_dict")
