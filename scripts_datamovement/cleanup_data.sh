@@ -1,4 +1,5 @@
-set -euo pipefail
+# set -euo pipefail
+set -u
 
 echo
 echo "Hostname: $(hostname)"
@@ -9,7 +10,7 @@ for dir in "${BOWTIE2_BUILD_STORAGE_PATH}" \
            "${SAMTOOLS_STORAGE_PATH}" \
            "${TAR_COMPRESS_STORAGE_PATH}"; do
     if [ -d "${dir}" ]; then
-        rm -rf "${dir}"
+        rm -rf "${dir}" || true
         echo "Removed directory: ${dir}"
     else
         echo "Directory ${dir} does not exist, skipping."

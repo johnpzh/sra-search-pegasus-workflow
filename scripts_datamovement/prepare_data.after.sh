@@ -1,4 +1,5 @@
-set -euo pipefail
+# set -euo pipefail
+set -u
 ####################################################
 # Note: file FILE_LIST needs to contain FILES array
 ####################################################

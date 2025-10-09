@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name="sra_nf_2node_5iter_tmpfs_10id"
+#SBATCH --job-name="nfs_sra_nf_2node_3iter_10id"
 #SBATCH --partition=slurm
 ######SBATCH --partition=short
 ######SBATCH --exclude=dc[119,077]
@@ -111,7 +111,7 @@ REFERENCE_FILE="${REFERENCE_FILE_DIR}/crassphage.fna"
 NFS_ORIGIN_DATA_DIR="${PREV_PWD}/../data"
 
 # rm -rf "${DATALIFE_OUTPUT_PATH}"
-if [ -d "${DATALIFE_OUTPUT_PATH}" ]; then
+if [ ! -d "${DATALIFE_OUTPUT_PATH}" ]; then
     mkdir -p "${DATALIFE_OUTPUT_PATH}"
 fi
 
@@ -158,7 +158,7 @@ SPM_RESULTS_FILE="workflow_spm_results/sra_search_filtered_spm_results.v0.4n_999
 STORAGE_CONFIG_TIME_START=$(date +%s.%N)
 
 STORAGE_CONFIG_FILE="nextflow.config.params.storage.nf"
-python ../scripts/py01.select_storage_type_from_spm.sra_search.v1.tmpfs.py \
+python ../scripts/py01.select_storage_type_from_spm.sra_search.v2.nfs.py \
     -s "${SPM_RESULTS_FILE}" \
     -l "${LOCAL_DIR_CONFIG}" \
     -o "${STORAGE_CONFIG_FILE}"
@@ -173,7 +173,10 @@ echo
 # 4. Pass the paths to Nextflow, and run Nextflow. Do data movement based on the paths.
 ########################################################################################
 
-num_iterations=5
+num_iterations=3
+echo
+echo "num_iterations_for_workflow: ${num_iterations}"
+echo
 
 WORKFLOW_TIME_START=$(date +%s.%N)
 

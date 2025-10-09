@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name="sra_nf_2node_5iter_tmpfs_10id"
+#SBATCH --job-name="beegfs_sra_nf_2node_5iter_10id"
 #SBATCH --partition=slurm
 ######SBATCH --partition=short
 ######SBATCH --exclude=dc[119,077]
@@ -111,7 +111,7 @@ REFERENCE_FILE="${REFERENCE_FILE_DIR}/crassphage.fna"
 NFS_ORIGIN_DATA_DIR="${PREV_PWD}/../data"
 
 # rm -rf "${DATALIFE_OUTPUT_PATH}"
-if [ -d "${DATALIFE_OUTPUT_PATH}" ]; then
+if [ ! -d "${DATALIFE_OUTPUT_PATH}" ]; then
     mkdir -p "${DATALIFE_OUTPUT_PATH}"
 fi
 
@@ -158,7 +158,7 @@ SPM_RESULTS_FILE="workflow_spm_results/sra_search_filtered_spm_results.v0.4n_999
 STORAGE_CONFIG_TIME_START=$(date +%s.%N)
 
 STORAGE_CONFIG_FILE="nextflow.config.params.storage.nf"
-python ../scripts/py01.select_storage_type_from_spm.sra_search.v1.tmpfs.py \
+python ../scripts/py01.select_storage_type_from_spm.sra_search.v3.beegfs.py \
     -s "${SPM_RESULTS_FILE}" \
     -l "${LOCAL_DIR_CONFIG}" \
     -o "${STORAGE_CONFIG_FILE}"

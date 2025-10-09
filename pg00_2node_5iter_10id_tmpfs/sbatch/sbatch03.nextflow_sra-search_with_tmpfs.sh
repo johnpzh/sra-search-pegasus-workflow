@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name="sra_nf_2node_5iter_tmpfs_10id"
+#SBATCH --job-name="tmpfs_sra_nf_2node_5iter_10id"
 #SBATCH --partition=slurm
 ######SBATCH --partition=short
 ######SBATCH --exclude=dc[119,077]
@@ -111,7 +111,7 @@ REFERENCE_FILE="${REFERENCE_FILE_DIR}/crassphage.fna"
 NFS_ORIGIN_DATA_DIR="${PREV_PWD}/../data"
 
 # rm -rf "${DATALIFE_OUTPUT_PATH}"
-if [ -d "${DATALIFE_OUTPUT_PATH}" ]; then
+if [ ! -d "${DATALIFE_OUTPUT_PATH}" ]; then
     mkdir -p "${DATALIFE_OUTPUT_PATH}"
 fi
 

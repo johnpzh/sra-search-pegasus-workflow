@@ -1,0 +1,17 @@
+params {
+  bowtie2_build_Storage_Type = 'beegfs'
+  bowtie2_samtools_Storage_Type = 'beegfs'
+  fasterq_dump_Storage_Type = 'beegfs'
+  samtools_Storage_Type = 'beegfs'
+  tar_compress_Storage_Type = 'beegfs'
+  bowtie2_build_Actual_Path = '/rcfs/scratch/peng599/output.workspace.2025-10-07T18:02:32'
+  bowtie2_samtools_Actual_Path = '/rcfs/scratch/peng599/output.workspace.2025-10-07T18:02:32'
+  fasterq_dump_Actual_Path = '/rcfs/scratch/peng599/output.workspace.2025-10-07T18:02:32'
+  samtools_Actual_Path = '/rcfs/scratch/peng599/output.workspace.2025-10-07T18:02:32'
+  tar_compress_Actual_Path = '/rcfs/scratch/peng599/output.workspace.2025-10-07T18:02:32'
+  bowtie2_build_Copy_To_Path = ''
+  bowtie2_samtools_Copy_To_Path = ''
+  fasterq_dump_Copy_To_Path = ''
+  samtools_Copy_To_Path = ''
+  tar_compress_Copy_To_Path = ''
+}
